@@ -36,7 +36,7 @@ func main() {
 		os.Exit(0)
 	}()
 gameloop:
-	for {
+	for i := 1; ; i++ {
 
 	roundSetup:
 		for {
@@ -73,50 +73,63 @@ gameloop:
 
 	roundloop:
 		for {
-			fmt.Printf("Your move: ")
-			reader := bufio.NewReader(os.Stdin)
-			// ReadString will block until the delimiter is entered
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Println("Usage: <row> <tiles removing>", err)
-				continue
+			if i%2 == 0 {
+				state.computerMove()
+				if checkWin(state.columns) {
+					Winner = 0
+					break roundloop
+				}
+				printGamestate(state.columns)
 			}
+		playerturn:
+			for {
+				fmt.Printf("Your move: ")
+				reader := bufio.NewReader(os.Stdin)
+				// ReadString will block until the delimiter is entered
+				input, err := reader.ReadString('\n')
+				if err != nil {
+					fmt.Println("Usage: <row> <tiles removing>", err)
+					continue playerturn
+				}
 
-			// remove the delimeter from the string
-			input = strings.TrimSuffix(input, "\n")
-			args := strings.Split(input, " ")
-			if len(args) != 2 {
-				fmt.Println("Usage: <row> <tiles removing>")
-				continue roundloop
-			}
-			row, err := strconv.Atoi(args[0])
-			if err != nil {
-				fmt.Println("invalid row")
-				continue roundloop
-			}
-			removing, err := strconv.Atoi(args[1])
-			if err != nil {
-				fmt.Println("invalid tile removal")
-				continue roundloop
-			}
-			if !checkValidMove(row-1, removing, state.columns) {
-				fmt.Println("Invalid move")
-				continue roundloop
-			}
+				// remove the delimeter from the string
+				input = strings.TrimSuffix(input, "\n")
+				args := strings.Split(input, " ")
+				if len(args) != 2 {
+					fmt.Println("Usage: <row> <tiles removing>")
+					continue playerturn
+				}
+				row, err := strconv.Atoi(args[0])
+				if err != nil {
+					fmt.Println("invalid row")
+					continue playerturn
+				}
+				removing, err := strconv.Atoi(args[1])
+				if err != nil {
+					fmt.Println("invalid tile removal")
+					continue playerturn
+				}
+				if !checkValidMove(row-1, removing, state.columns) {
+					fmt.Println("Invalid move")
+					continue playerturn
+				}
 
-			state.move(row-1, removing)
-			if checkWin(state.columns) {
-				Winner = 1
-				break roundloop
+				state.move(row-1, removing)
+				if checkWin(state.columns) {
+					Winner = 1
+					break roundloop
+				}
+				printGamestate(state.columns)
+				break playerturn
 			}
-			printGamestate(state.columns)
-
-			state.computerMove()
-			if checkWin(state.columns) {
-				Winner = 0
-				break roundloop
+			if i%2 != 0 {
+				state.computerMove()
+				if checkWin(state.columns) {
+					Winner = 0
+					break roundloop
+				}
+				printGamestate(state.columns)
 			}
-			printGamestate(state.columns)
 
 		}
 
@@ -142,7 +155,10 @@ gameloop:
 			if input == "y\n" {
 				continue gameloop
 			} else {
-				break gameloop
+				fmt.Println("\n=========================================================")
+				fmt.Println("See you next time")
+				fmt.Println("=========================================================")
+				os.Exit(0)
 			}
 		}
 	}
