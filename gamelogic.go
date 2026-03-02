@@ -81,3 +81,14 @@ func (state *gamestate) computerMove() error {
 func (state *gamestate) move(column, removing int) {
 	state.columns[column] -= removing
 }
+
+func checkValidMove(column, removing int, columns []int) bool {
+	if len(columns) <= column {
+		return false
+	}
+	return columns[column] >= removing
+}
+
+func checkWin(columns []int) bool {
+	return numNonZero(columns) == 0
+}

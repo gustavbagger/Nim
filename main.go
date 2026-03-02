@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 )
 
 /* Add features:
 - toggle functionality for 'You have lost already, I can force a win' message
-- choose different starting setups
+- repeat same setup as last round
 */
 
 func main() {
@@ -20,47 +21,64 @@ func main() {
 
 	var state *gamestate
 
-gameSetup:
-	for {
-		fmt.Println("Enter desired game setup: ")
-		reader := bufio.NewReader(os.Stdin)
-		// ReadString will block until the delimiter is entered
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("An error occured while reading input. Please try again", err)
-			continue
-		}
-		input = strings.TrimSuffix(input, "\n")
-		args := strings.Split(input, " ")
+	currentScore := []int{0, 0}
 
-		var argInts []int
-		for _, str := range args {
-			argInt, err := strconv.Atoi(str)
+	var Winner int
+
+	// Setup interrupt signal handler
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	go func() {
+		<-signalChan
+		fmt.Println("\n=========================================================")
+		fmt.Println("See you next time")
+		fmt.Println("=========================================================")
+		os.Exit(0)
+	}()
+gameloop:
+	for {
+
+	roundSetup:
+		for {
+			fmt.Println("Enter desired game setup: ")
+			reader := bufio.NewReader(os.Stdin)
+			// ReadString will block until the delimiter is entered
+			input, err := reader.ReadString('\n')
 			if err != nil {
-				fmt.Println("invalid entry")
-				continue gameSetup
+				fmt.Println("An error occured while reading input. Please try again", err)
+				continue
 			}
-			argInts = append(argInts, argInt)
+			input = strings.TrimSuffix(input, "\n")
+			args := strings.Split(input, " ")
+
+			var argInts []int
+			for _, str := range args {
+				argInt, err := strconv.Atoi(str)
+				if err != nil {
+					fmt.Println("invalid entry")
+					continue roundSetup
+				}
+				argInts = append(argInts, argInt)
+			}
+			state = gamestateNew(argInts...)
+
+			break roundSetup
+
 		}
-		state = gamestateNew(argInts...)
 
-		break gameSetup
+		fmt.Println("=========================================================")
+		fmt.Println("Game has been initialised in the following state:")
+		printGamestate(state.columns)
+		fmt.Println("=========================================================")
 
-	}
-	fmt.Println("=========================================================")
-	fmt.Println("Game has been initialised in the following state:")
-	printGamestate(state.columns)
-	fmt.Println("=========================================================")
-
-	//gameloop
-	for {
+	roundloop:
 		for {
 			fmt.Printf("Your move: ")
 			reader := bufio.NewReader(os.Stdin)
 			// ReadString will block until the delimiter is entered
 			input, err := reader.ReadString('\n')
 			if err != nil {
-				fmt.Println("An error occured while reading input. Please try again", err)
+				fmt.Println("Usage: <row> <tiles removing>", err)
 				continue
 			}
 
@@ -69,37 +87,64 @@ gameSetup:
 			args := strings.Split(input, " ")
 			if len(args) != 2 {
 				fmt.Println("Usage: <row> <tiles removing>")
-				continue
+				continue roundloop
 			}
 			row, err := strconv.Atoi(args[0])
 			if err != nil {
 				fmt.Println("invalid row")
-				continue
+				continue roundloop
 			}
 			removing, err := strconv.Atoi(args[1])
 			if err != nil {
 				fmt.Println("invalid tile removal")
-				continue
+				continue roundloop
 			}
+			if !checkValidMove(row-1, removing, state.columns) {
+				fmt.Println("Invalid move")
+				continue roundloop
+			}
+
 			state.move(row-1, removing)
+			if checkWin(state.columns) {
+				Winner = 1
+				break roundloop
+			}
 			printGamestate(state.columns)
 
 			state.computerMove()
+			if checkWin(state.columns) {
+				Winner = 0
+				break roundloop
+			}
 			printGamestate(state.columns)
-			break
 
 		}
 
+		fmt.Println("=========================================================")
+		if Winner == 0 {
+			fmt.Println("Computer wins :/")
+			currentScore[0] += 1
+		} else {
+			fmt.Println("You win!!")
+			currentScore[1] += 1
+		}
+		fmt.Printf("Computer: %v Player: %v\n", currentScore[0], currentScore[1])
+		fmt.Println("=========================================================")
+		for {
+			fmt.Printf("Would you like to play again? (y/n) ")
+			reader := bufio.NewReader(os.Stdin)
+			// ReadString will block until the delimiter is entered
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				continue
+			}
+
+			if input == "y\n" {
+				continue gameloop
+			} else {
+				break gameloop
+			}
+		}
 	}
-	/*
-			//Exit programme proceedure with ctrl+C
-			signalChan := make(chan os.Signal, 1)
-			signal.Notify(signalChan, os.Interrupt)
-			<-signalChan
-			break
-			fmt.Println("")
-		fmt.Println("=========================================================")
-			fmt.Println("See you next time")
-		fmt.Println("=========================================================")
-	*/
+
 }
