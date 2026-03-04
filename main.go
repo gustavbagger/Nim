@@ -14,12 +14,35 @@ import (
 - repeat same setup as last round
 */
 
+func setup() []int {
+	fmt.Println("Enter desired game setup: ")
+	reader := bufio.NewReader(os.Stdin)
+	// ReadString will block until the delimiter is entered
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("An error occured while reading input. Please try again", err)
+		return setup()
+	}
+	input = strings.TrimSuffix(input, "\n")
+	args := strings.Split(input, " ")
+
+	var argInts []int
+	for _, str := range args {
+		argInt, err := strconv.Atoi(str)
+		if err != nil {
+			fmt.Println("invalid entry")
+			return setup()
+		}
+		argInts = append(argInts, argInt)
+	}
+	return argInts
+
+}
+
 func main() {
 	fmt.Println("=========================================================")
 	fmt.Println("Welcome to Nim")
 	fmt.Println("=========================================================")
-
-	var state *gamestate
 
 	currentScore := []int{0, 0}
 
@@ -38,36 +61,13 @@ func main() {
 gameloop:
 	for i := 1; ; i++ {
 
-	roundSetup:
-		for {
-			fmt.Println("Enter desired game setup: ")
-			reader := bufio.NewReader(os.Stdin)
-			// ReadString will block until the delimiter is entered
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Println("An error occured while reading input. Please try again", err)
-				continue
-			}
-			input = strings.TrimSuffix(input, "\n")
-			args := strings.Split(input, " ")
-
-			var argInts []int
-			for _, str := range args {
-				argInt, err := strconv.Atoi(str)
-				if err != nil {
-					fmt.Println("invalid entry")
-					continue roundSetup
-				}
-				argInts = append(argInts, argInt)
-			}
-			state = gamestateNew(argInts...)
-
-			break roundSetup
-
+		emptyGamestate := gamestate{
+			columns: setup(),
 		}
+		state := &emptyGamestate
 
 		fmt.Println("=========================================================")
-		fmt.Println("Game has been initialised in the following state:")
+		fmt.Printf("Round %v has been initialised in the following state:\n", i)
 		printGamestate(state.columns)
 		fmt.Println("=========================================================")
 
