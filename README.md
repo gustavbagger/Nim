@@ -27,11 +27,11 @@ cd Nim
 ```
 
 ### Build the compiled binary
-
+**build standard binary**
 ```bash
 go build
 ```
-or 
+**build windows .exe file**
 ```bash
 GOOS=windows GOARCH=amd64 go build -o <fileName.exe>
 ```
