@@ -30,12 +30,12 @@ func players() []player {
 		fmt.Println("An error occured while reading input. Please try again", err)
 		return players()
 	}
-	input = strings.TrimSuffix(input, "\n")
+	input = strings.TrimSpace(input)
 	args := strings.Split(input, " ")
 	if len(args) == 1 {
 		return []player{
-			player{"computer", 0, 0},
-			player{args[0], 1, 0},
+			{"computer", 0, 0},
+			{args[0], 1, 0},
 		}
 	} else if len(args) == 2 {
 		var playerSlice []player
@@ -51,7 +51,7 @@ func players() []player {
 }
 
 func setup() []int {
-	fmt.Println("Enter desired game setup: ")
+	fmt.Println("Enter desired game setup: (d for default)")
 	reader := bufio.NewReader(os.Stdin)
 	// ReadString will block until the delimiter is entered
 	input, err := reader.ReadString('\n')
@@ -59,7 +59,7 @@ func setup() []int {
 		fmt.Println("An error occured while reading input. Please try again", err)
 		return setup()
 	}
-	input = strings.TrimSuffix(input, "\n")
+	input = strings.TrimSpace(input)
 	args := strings.Split(input, " ")
 
 	var argInts []int
@@ -90,7 +90,7 @@ func (state *gamestate) playerMove(player player) {
 	}
 
 	// remove the delimeter from the string
-	input = strings.TrimSuffix(input, "\n")
+	input = strings.TrimSpace(input)
 	args := strings.Split(input, " ")
 	if len(args) != 2 {
 		fmt.Println("Usage: <row> <tiles removing>")
@@ -148,7 +148,7 @@ func whoStarts(players []player) player {
 	}
 
 	// remove the delimeter from the string
-	nameOfStartingPlayer := strings.TrimSuffix(input, "\n")
+	nameOfStartingPlayer := strings.TrimSpace(input)
 	for _, player := range players {
 		if player.name == nameOfStartingPlayer {
 			return player
@@ -166,9 +166,10 @@ func playAgain() bool {
 	if err != nil {
 		return playAgain()
 	}
-	if input == "y\n" {
+	input = strings.TrimSpace(input)
+	if input == "y" {
 		return true
-	} else if input == "n\n" {
+	} else if input == "n" {
 		fmt.Println("\n=========================================================")
 		fmt.Println("See you next time")
 		fmt.Println("=========================================================")
