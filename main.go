@@ -63,6 +63,9 @@ func setup() []int {
 	args := strings.Split(input, " ")
 
 	var argInts []int
+	if args[0] == "d" {
+		return []int{7, 5, 3, 1}
+	}
 	for _, str := range args {
 		argInt, err := strconv.Atoi(str)
 		if err != nil {
