@@ -9,10 +9,46 @@ import (
 	"strings"
 )
 
-/* Add features:
+/*
+	Add features:
+
 - toggle functionality for 'You have lost already, I can force a win' message
 - repeat same setup as last round
 */
+type player struct {
+	name string
+	id   int
+	wins int
+}
+
+func players() []player {
+	fmt.Println("Who is playing: (one name for pve or two names for pvp)")
+	reader := bufio.NewReader(os.Stdin)
+	// ReadString will block until the delimiter is entered
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("An error occured while reading input. Please try again", err)
+		return players()
+	}
+	input = strings.TrimSuffix(input, "\n")
+	args := strings.Split(input, " ")
+	if len(args) == 1 {
+		return []player{
+			player{"computer", 0, 0},
+			player{args[0], 1, 0},
+		}
+	} else if len(args) == 2 {
+		var playerSlice []player
+		for i, name := range args {
+			playerSlice = append(playerSlice, player{name, i, 0})
+		}
+		return playerSlice
+	} else {
+		fmt.Println("Currently we only support one- or two-player games")
+		return players()
+	}
+
+}
 
 func setup() []int {
 	fmt.Println("Enter desired game setup: ")
@@ -39,15 +75,113 @@ func setup() []int {
 
 }
 
+func (state *gamestate) playerMove(player player) {
+	fmt.Printf("%v's turn: ", player.name)
+	reader := bufio.NewReader(os.Stdin)
+	// ReadString will block until the delimiter is entered
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Usage: <row> <tiles removing>", err)
+		state.playerMove(player)
+		return
+	}
+
+	// remove the delimeter from the string
+	input = strings.TrimSuffix(input, "\n")
+	args := strings.Split(input, " ")
+	if len(args) != 2 {
+		fmt.Println("Usage: <row> <tiles removing>")
+		state.playerMove(player)
+		return
+	}
+	row, err := strconv.Atoi(args[0])
+	if err != nil {
+		fmt.Println("invalid row")
+		state.playerMove(player)
+		return
+	}
+	removing, err := strconv.Atoi(args[1])
+	if err != nil {
+		fmt.Println("invalid tile removal")
+		state.playerMove(player)
+		return
+	}
+	if !checkValidMove(row-1, removing, state.columns) {
+		fmt.Println("Invalid move")
+		state.playerMove(player)
+		return
+	}
+
+	state.move(row-1, removing)
+	state.whoJustPlayed = player
+	printGamestate(state.columns)
+}
+
+func (state *gamestate) displayWin() []player {
+	fmt.Println("=========================================================")
+	fmt.Printf("%v wins!\n", state.whoJustPlayed.name)
+
+	winningPlayerID := state.whoJustPlayed.id
+	state.players[winningPlayerID].wins += 1
+
+	fmt.Printf(
+		"%s: %v wins --- %s: %v wins\n",
+		state.players[0].name, state.players[0].wins,
+		state.players[1].name, state.players[1].wins,
+	)
+
+	fmt.Println("=========================================================")
+	return state.players
+}
+
+func whoStarts(players []player) player {
+	fmt.Printf("Who starts? (computer/player name)")
+	reader := bufio.NewReader(os.Stdin)
+	// ReadString will block until the delimiter is entered
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("type one name", err)
+		return whoStarts(players)
+	}
+
+	// remove the delimeter from the string
+	nameOfStartingPlayer := strings.TrimSuffix(input, "\n")
+	for _, player := range players {
+		if player.name == nameOfStartingPlayer {
+			return player
+		}
+	}
+	fmt.Println("could not find player")
+	return whoStarts(players)
+}
+
+func playAgain() bool {
+	fmt.Printf("Would you like to play again? (y/n) ")
+	reader := bufio.NewReader(os.Stdin)
+	// ReadString will block until the delimiter is entered
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return playAgain()
+	}
+	if input == "y\n" {
+		return true
+	} else if input == "n\n" {
+		fmt.Println("\n=========================================================")
+		fmt.Println("See you next time")
+		fmt.Println("=========================================================")
+		os.Exit(0)
+		return false
+	} else {
+		return playAgain()
+	}
+}
+
 func main() {
 	fmt.Println("=========================================================")
 	fmt.Println("Welcome to Nim")
 	fmt.Println("=========================================================")
-
-	currentScore := []int{0, 0}
-
-	var Winner int
-
+	playerMap := players()
+	fmt.Println("=========================================================")
 	// Setup interrupt signal handler
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
@@ -58,11 +192,13 @@ func main() {
 		fmt.Println("=========================================================")
 		os.Exit(0)
 	}()
-gameloop:
-	for i := 1; ; i++ {
 
+	for i := 1; ; i++ {
 		emptyGamestate := gamestate{
-			columns: setup(),
+			columns:        setup(),
+			whoJustPlayed:  player{},
+			players:        playerMap,
+			startingPlayer: whoStarts(playerMap),
 		}
 		state := &emptyGamestate
 
@@ -73,94 +209,26 @@ gameloop:
 
 	roundloop:
 		for {
-			if i%2 == 0 {
-				state.computerMove()
-				if checkWin(state.columns) {
-					Winner = 0
-					break roundloop
-				}
-				printGamestate(state.columns)
+			state.playerMove(state.startingPlayer)
+			if checkWin(state.columns) {
+				playerMap = state.displayWin()
+				break roundloop
 			}
-		playerturn:
-			for {
-				fmt.Printf("Your move: ")
-				reader := bufio.NewReader(os.Stdin)
-				// ReadString will block until the delimiter is entered
-				input, err := reader.ReadString('\n')
-				if err != nil {
-					fmt.Println("Usage: <row> <tiles removing>", err)
-					continue playerturn
+			for _, player := range state.players {
+				if player.name != state.startingPlayer.name {
+					if player.name == "computer" {
+						state.computerMove(player)
+					} else {
+						state.playerMove(player)
+					}
+					if checkWin(state.columns) {
+						playerMap = state.displayWin()
+						break roundloop
+					}
 				}
-
-				// remove the delimeter from the string
-				input = strings.TrimSuffix(input, "\n")
-				args := strings.Split(input, " ")
-				if len(args) != 2 {
-					fmt.Println("Usage: <row> <tiles removing>")
-					continue playerturn
-				}
-				row, err := strconv.Atoi(args[0])
-				if err != nil {
-					fmt.Println("invalid row")
-					continue playerturn
-				}
-				removing, err := strconv.Atoi(args[1])
-				if err != nil {
-					fmt.Println("invalid tile removal")
-					continue playerturn
-				}
-				if !checkValidMove(row-1, removing, state.columns) {
-					fmt.Println("Invalid move")
-					continue playerturn
-				}
-
-				state.move(row-1, removing)
-				if checkWin(state.columns) {
-					Winner = 1
-					break roundloop
-				}
-				printGamestate(state.columns)
-				break playerturn
-			}
-			if i%2 != 0 {
-				state.computerMove()
-				if checkWin(state.columns) {
-					Winner = 0
-					break roundloop
-				}
-				printGamestate(state.columns)
-			}
-
-		}
-
-		fmt.Println("=========================================================")
-		if Winner == 0 {
-			fmt.Println("Computer wins :/")
-			currentScore[0] += 1
-		} else {
-			fmt.Println("You win!!")
-			currentScore[1] += 1
-		}
-		fmt.Printf("Computer: %v Player: %v\n", currentScore[0], currentScore[1])
-		fmt.Println("=========================================================")
-		for {
-			fmt.Printf("Would you like to play again? (y/n) ")
-			reader := bufio.NewReader(os.Stdin)
-			// ReadString will block until the delimiter is entered
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				continue
-			}
-
-			if input == "y\n" {
-				continue gameloop
-			} else {
-				fmt.Println("\n=========================================================")
-				fmt.Println("See you next time")
-				fmt.Println("=========================================================")
-				os.Exit(0)
 			}
 		}
+		playAgain()
+
 	}
-
 }

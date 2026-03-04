@@ -7,7 +7,10 @@ import (
 )
 
 type gamestate struct {
-	columns []int
+	columns        []int
+	whoJustPlayed  player
+	players        []player
+	startingPlayer player
 }
 
 func gamestateNew(columns ...int) *gamestate {
@@ -67,7 +70,7 @@ func findOptimalPlay(columns []int) (column int, removing int, err error) {
 	return 0, 0, errors.New("couldnt find optimal move")
 }
 
-func (state *gamestate) computerMove() error {
+func (state *gamestate) computerMove(computer player) error {
 	column, removing, err := findOptimalPlay(state.columns)
 	if err != nil {
 		fmt.Println("Logic failure: ", err)
@@ -75,6 +78,8 @@ func (state *gamestate) computerMove() error {
 	}
 	state.move(column, removing)
 	fmt.Printf("Computer move: %v %v\n", column+1, removing)
+	state.whoJustPlayed = computer
+	printGamestate(state.columns)
 	return nil
 }
 
