@@ -138,7 +138,7 @@ func (state *gamestate) displayWin() []player {
 }
 
 func whoStarts(players []player) player {
-	fmt.Printf("Who starts? (computer/player name)")
+	fmt.Println("Who starts? (computer/player name)")
 	reader := bufio.NewReader(os.Stdin)
 	// ReadString will block until the delimiter is entered
 	input, err := reader.ReadString('\n')
@@ -182,10 +182,14 @@ func playAgain() bool {
 
 func main() {
 	fmt.Println("=========================================================")
-	fmt.Println("Welcome to Nim")
+	fmt.Println(
+		"Welcome to Nim\n",
+		"bla",
+	)
 	fmt.Println("=========================================================")
 	playerMap := players()
 	fmt.Println("=========================================================")
+
 	// Setup interrupt signal handler
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
@@ -213,7 +217,11 @@ func main() {
 
 	roundloop:
 		for {
-			state.playerMove(state.startingPlayer)
+			if state.startingPlayer.name == "computer" {
+				state.computerMove(state.startingPlayer)
+			} else {
+				state.playerMove(state.startingPlayer)
+			}
 			if checkWin(state.columns) {
 				playerMap = state.displayWin()
 				break roundloop
