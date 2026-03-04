@@ -15,6 +15,7 @@ import (
 - toggle functionality for 'You have lost already, I can force a win' message
 - repeat same setup as last round
 */
+
 type player struct {
 	name string
 	id   int
@@ -121,7 +122,7 @@ func (state *gamestate) playerMove(player player) {
 }
 
 func (state *gamestate) displayWin() []player {
-	fmt.Println("=========================================================")
+	fmt.Println("=======================================================================")
 	fmt.Printf("%v wins!\n", state.whoJustPlayed.name)
 
 	winningPlayerID := state.whoJustPlayed.id
@@ -133,7 +134,7 @@ func (state *gamestate) displayWin() []player {
 		state.players[1].name, state.players[1].wins,
 	)
 
-	fmt.Println("=========================================================")
+	fmt.Println("=======================================================================")
 	return state.players
 }
 
@@ -170,9 +171,9 @@ func playAgain() bool {
 	if input == "y" {
 		return true
 	} else if input == "n" {
-		fmt.Println("\n=========================================================")
+		fmt.Println("\n=======================================================================")
 		fmt.Println("See you next time")
-		fmt.Println("=========================================================")
+		fmt.Println("=======================================================================")
 		os.Exit(0)
 		return false
 	} else {
@@ -181,23 +182,25 @@ func playAgain() bool {
 }
 
 func main() {
-	fmt.Println("=========================================================")
+	fmt.Println("=======================================================================")
 	fmt.Println(
-		"Welcome to Nim\n",
-		"bla",
+		"--Welcome to Nim--\n",
+		"This game consists of several rows of tiles and is turn based.\n",
+		"Players alternate by removing tiles from a single row at a time.\n",
+		"The winner is the player who removes the last tile from the entire board.",
 	)
-	fmt.Println("=========================================================")
+	fmt.Println("=======================================================================")
 	playerMap := players()
-	fmt.Println("=========================================================")
+	fmt.Println("=======================================================================")
 
 	// Setup interrupt signal handler
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	go func() {
 		<-signalChan
-		fmt.Println("\n=========================================================")
+		fmt.Println("\n=======================================================================")
 		fmt.Println("See you next time")
-		fmt.Println("=========================================================")
+		fmt.Println("=======================================================================")
 		os.Exit(0)
 	}()
 
@@ -210,10 +213,10 @@ func main() {
 		}
 		state := &emptyGamestate
 
-		fmt.Println("=========================================================")
+		fmt.Println("=======================================================================")
 		fmt.Printf("Round %v has been initialised in the following state:\n", i)
 		printGamestate(state.columns)
-		fmt.Println("=========================================================")
+		fmt.Println("=======================================================================")
 
 	roundloop:
 		for {
